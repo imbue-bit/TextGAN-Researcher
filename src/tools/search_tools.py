@@ -14,9 +14,9 @@ from ..models.execution_state import EnhancedExecutionState
 
 
 class EnhancedWebSearchTool(BaseTool):
-    """真实的Web搜索工具，支持Google Custom Search API和DuckDuckGo API"""
-    name = "web_search"
-    description = "Search the web for information on a given query using real search APIs. Returns a JSON list of SearchResultItem, including content, URL, publish_date (ISO format), and confidence score (0.0-1.0). Example input: 'latest AI regulations in EU'"
+    """真实的 Web 搜索工具，支持 Google Custom Search API 和 DuckDuckGo API"""
+    name: str = "web_search"
+    description: str = "Search the web for information on a given query using real search APIs. Returns a JSON list of SearchResultItem, including content, URL, publish_date (ISO format), and confidence score (0.0-1.0). Example input: 'latest AI regulations in EU'"
     
     def __init__(self, search_api_key: Optional[str] = None, search_engine: str = "duckduckgo"):
         super().__init__()
@@ -28,7 +28,7 @@ class EnhancedWebSearchTool(BaseTool):
             raise ValueError("Google Custom Search API requires SEARCH_API_KEY environment variable")
     
     def _search_google(self, query: str) -> List[SearchResultItem]:
-        """使用Google Custom Search API进行搜索"""
+        """使用 Google Custom Search API 进行搜索"""
         if not self.search_api_key or not self.google_cx:
             raise ValueError("Google Custom Search requires both SEARCH_API_KEY and GOOGLE_CX environment variables")
         
@@ -37,7 +37,7 @@ class EnhancedWebSearchTool(BaseTool):
             "key": self.search_api_key,
             "cx": self.google_cx,
             "q": query,
-            "num": 5  # 最多返回5个结果
+            "num": 5  # 最多返回 5 个结果
         }
         
         try:
@@ -48,7 +48,7 @@ class EnhancedWebSearchTool(BaseTool):
                 
                 results = []
                 for item in data.get("items", []):
-                    # 尝试从snippet中提取发布日期
+                    # 尝试从 snippet 中提取发布日期
                     publish_date = None
                     if "pagemap" in item and "metatags" in item["pagemap"]:
                         for meta in item["pagemap"]["metatags"]:
@@ -68,11 +68,11 @@ class EnhancedWebSearchTool(BaseTool):
                 
                 return results
         except Exception as e:
-            print(f"Google搜索失败: {str(e)}")
+            print(f"Google 搜索失败：{str(e)}")
             return []
     
     def _search_duckduckgo(self, query: str) -> List[SearchResultItem]:
-        """使用DuckDuckGo Instant Answer API进行搜索"""
+        """使用 DuckDuckGo Instant Answer API 进行搜索"""
         url = "https://api.duckduckgo.com/"
         params = {
             "q": query,
@@ -89,7 +89,7 @@ class EnhancedWebSearchTool(BaseTool):
                 
                 results = []
                 
-                # 添加Abstract结果
+                # 添加 Abstract 结果
                 if data.get("Abstract"):
                     results.append(SearchResultItem(
                         content=data["Abstract"],
@@ -98,7 +98,7 @@ class EnhancedWebSearchTool(BaseTool):
                         confidence=0.8
                     ))
                 
-                # 添加Related Topics
+                # 添加 Related Topics
                 for topic in data.get("RelatedTopics", [])[:3]:
                     if isinstance(topic, dict) and "Text" in topic:
                         results.append(SearchResultItem(
@@ -110,7 +110,7 @@ class EnhancedWebSearchTool(BaseTool):
                 
                 return results
         except Exception as e:
-            print(f"DuckDuckGo搜索失败: {str(e)}")
+            print(f"DuckDuckGo 搜索失败：{str(e)}")
             return []
     
     def _calculate_confidence(self, domain: str) -> float:
@@ -151,7 +151,7 @@ class EnhancedWebSearchTool(BaseTool):
             elif self.search_engine == "duckduckgo":
                 results = self._search_duckduckgo(query)
             else:
-                # 默认使用DuckDuckGo
+                # 默认使用 DuckDuckGo
                 results = self._search_duckduckgo(query)
             
             # 如果没有结果，返回模拟数据
@@ -167,7 +167,7 @@ class EnhancedWebSearchTool(BaseTool):
             
             return json.dumps([r.dict() for r in results])
         except Exception as e:
-            print(f"搜索失败: {str(e)}")
+            print(f"搜索失败：{str(e)}")
             # 返回模拟数据作为后备
             mock_results = [
                 SearchResultItem(
@@ -182,8 +182,8 @@ class EnhancedWebSearchTool(BaseTool):
 
 class GoalDecompositionTool(BaseTool):
     """目标分解工具"""
-    name = "decompose_goal"
-    description = "Break down a complex research goal into smaller, manageable sub-goals. Input: The main goal string. Output: A JSON array of sub-goal strings. Example input: 'Understand climate change impacts on agriculture'"
+    name: str = "decompose_goal"
+    description: str = "Break down a complex research goal into smaller, manageable sub-goals. Input: The main goal string. Output: A JSON array of sub-goal strings. Example input: 'Understand climate change impacts on agriculture'"
     
     def __init__(self, llm: BaseChatModel, state: EnhancedExecutionState):
         super().__init__()
@@ -192,31 +192,31 @@ class GoalDecompositionTool(BaseTool):
         self.prompt = PromptTemplate.from_template(
             """你是一个专业的研究规划专家。你的任务是将复杂的研究目标分解为更小、更具体的子目标。
             
-            主要研究目标: {main_goal}
+            主要研究目标：{main_goal}
             
-            请将这个目标分解为3-7个具体的子目标。每个子目标应该:
+            请将这个目标分解为 3-7 个具体的子目标。每个子目标应该：
             1. 清晰明确
             2. 可独立研究
             3. 共同涵盖主目标的核心方面
             
-            以JSON数组格式返回子目标列表:
+            以 JSON 数组格式返回子目标列表：
             [
               "第一个子目标描述",
               "第二个子目标描述",
               ...
             ]
             
-            仅返回JSON数组，不要有其他说明。"""
+            仅返回 JSON 数组，不要有其他说明。"""
         )
     
     def _run(self, goal: str) -> str:
         response = self.llm.invoke([HumanMessage(content=self.prompt.format(main_goal=goal))])
         try:
             sub_goals = json.loads(response.content)
-            result_messages = ["目标已分解为以下子目标:"]
+            result_messages = ["目标已分解为以下子目标："]
             for sub_goal in sub_goals:
                 goal_id = self.state.add_goal(sub_goal)
                 result_messages.append(f"- {goal_id}: {sub_goal}")
             return "\n".join(result_messages)
         except Exception as e:
-            return f"目标分解失败: {str(e)}. 原始响应: {response.content}" 
+            return f"目标分解失败：{str(e)}. 原始响应：{response.content}" 
